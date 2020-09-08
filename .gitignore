@@ -5,6 +5,7 @@
 
 # Specific folders
 resources
+.vscode
 
 # User-specific files
 *.rsuser
