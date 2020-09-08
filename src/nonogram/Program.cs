@@ -1,19 +1,79 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
+using System.Web;
+using System.Threading.Tasks;
+using System.Net;
+using System.Text;
+using System.Xml.Serialization;
 
 namespace Nonogram
 {
     class Program
     {
-        static int counter = 0;
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            GameState board = ReadFromFile(@"C:\Users\b7lew\OneDrive - Queensland University of Technology (1)\Documents\Coursework\2020\S2\CAB401\Project\Nonogram64\Nonogram\Puzzles\fishEater.nono");
 
-            Solver solver = new Solver(board);
+            PuzzleSet puzzle = null;
+            string path = "../../resources/test.xml";
 
-            solver.Solve();
+            XmlSerializer serializer = new XmlSerializer(typeof(PuzzleSet));
+
+            StreamReader reader = new StreamReader(path);
+            puzzle = (PuzzleSet)serializer.Deserialize(reader);
+            reader.Close();
+
+            Console.WriteLine(puzzle.Puzzle);
+
+            // HttpWebRequest request =
+            // (HttpWebRequest)WebRequest.Create("https://webpbn.com/export.cgi");
+
+            // request.Credentials = CredentialCache.DefaultCredentials;
+
+            // request.Method = "POST";
+
+            // // Create POST data and convert it to a byte array.
+            // string postData = "fmt=xml&go=1&id=2040";
+            // byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+
+            // // Set the ContentType property of the WebRequest.
+            // request.ContentType = "application/x-www-form-urlencoded";
+            // // Set the ContentLength property of the WebRequest.
+            // request.ContentLength = byteArray.Length;
+
+            // // Get the request stream.
+            // Stream dataStream = request.GetRequestStream();
+            // // Write the data to the request stream.
+            // dataStream.Write(byteArray, 0, byteArray.Length);
+            // // Close the Stream object.
+            // dataStream.Close();
+
+            // // Get the response.
+            // WebResponse response = request.GetResponse();
+            // // Display the status.
+            // Console.WriteLine(((HttpWebResponse)response).StatusDescription);
+
+            // // Get the stream containing content returned by the server.
+            // // The using block ensures the stream is automatically closed.
+            // using (dataStream = response.GetResponseStream())
+            // {
+            //     // Open the stream using a StreamReader for easy access.
+            //     StreamReader reader = new StreamReader(dataStream);
+            //     // Read the content.
+            //     string responseFromServer = reader.ReadToEnd();
+            //     // Display the content.
+            //     Console.WriteLine(responseFromServer);
+            // }
+
+            // // Close the response.
+            // response.Close();
+
+            // GameState board = ReadFromFile(@"C:\Users\b7lew\OneDrive - Queensland University of Technology (1)\Documents\Coursework\2020\S2\CAB401\Project\Nonogram64\Nonogram\Puzzles\fishEater.nono");
+
+            // Solver solver = new Solver(board);
+
+            // solver.Solve();
         }
 
         private static GameState ReadFromFile(string filename)
