@@ -1,4 +1,4 @@
 # nonogram
-C# Implementation of a Nonogram (Picross) Game
+C# Implementation of a Nonogram (Picross) Solver
 
 *Documentation coming soon...*
