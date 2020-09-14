@@ -92,6 +92,23 @@ namespace Nonogram
             this.columnHints = columnHints;
         }
 
+        public GameState(Puzzle puzzle)
+        {
+            this.rowHints = puzzle.HintSets[1];
+            this.columnHints = puzzle.HintSets[0];
+
+            this.cells = new CellState[rowHints.Length][];
+            
+            for (int i = 0; i < rowHints.Length; i++)
+            {
+                cells[i] = new CellState[columnHints.Length];
+                for (int j = 0; j < columnHints.Length; j++)
+                {
+                    cells[i][j] = CellState.Blank;
+                }
+            }
+        }
+
         public bool IsBlank()
         {
             for (int i = 0; i < cells.Length; ++i)
