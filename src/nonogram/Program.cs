@@ -36,7 +36,6 @@ namespace Nonogram
             {
                 puzzle = (PuzzleSet)serializer.Deserialize(reader);
             }
-            
 
             Console.WriteLine(puzzle.Puzzle);
 
