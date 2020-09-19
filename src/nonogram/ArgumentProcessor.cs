@@ -6,37 +6,22 @@ namespace nonogram
 {
     public abstract class ArgumentProcessor
     {
-        public abstract void Process(string[] args);
+        private ArgumentFactory<Command> commandFactory;
 
-        protected string[] ExtractArguments(string[] args, int startIndex, int argCount)
+        public ArgumentProcessor() : base()
         {
-            string[] extract = new string[argCount];
-            for (int i = startIndex; i < argCount && i < args.Length; i++)
-            {
-                extract[i - startIndex] = args[i];
-            }
-            return extract;
-        }
-    }
-
-    public class CommandProcessor : ArgumentProcessor
-    {
-        private CommandFactory commandFactory;
-
-        public CommandProcessor() : base()
-        {
-            commandFactory = new CommandFactory(
+            commandFactory = new ArgumentFactory<Command>(
                 new Command[]
                 {
-                    new Help(),
-                    new Solve(),
-                    new Benchmark(),
-                    new Play(),
+                    new HelpCommand(),
+                    new SolveCommand(),
+                    new BenchmarkCommand(),
+                    new PlayCommand(),
                 }
             );
         }
 
-        public override void Process(string[] args)
+        public void Process(string[] args)
         {
             if (args.Length < 1)
             {
@@ -46,24 +31,19 @@ namespace nonogram
             }
 
             string commandName = args[0];
-            Command command = commandFactory.SelectCommand(commandName);
-            string[] subargs = ExtractArguments(args, 0, args.Length - 1);
+            Command command = commandFactory.SelectArgument(commandName);
+            string[] subargs = ExtractArguments(args, 1, args.Length - 1);
             command.Execute(subargs);
         }
-    }
 
-    public class OptionProcessor : ArgumentProcessor
-    {
-        private OptionFactory optionFactory;
-
-        public OptionProcessor() : base()
+        public static string[] ExtractArguments(string[] args, int startIndex, int argCount)
         {
-            optionFactory = new OptionFactory();
-        }
-
-        public override void Process(string[] args)
-        {
-            //Option option = optionFactory.SelectCommand();
+            string[] extract = new string[argCount];
+            for (int i = startIndex; i < argCount && i < args.Length; i++)
+            {
+                extract[i - startIndex] = args[i];
+            }
+            return extract;
         }
     }
 }
