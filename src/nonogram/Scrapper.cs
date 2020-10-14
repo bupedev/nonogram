@@ -5,11 +5,6 @@ using System.Text;
 
 namespace Nonogram
 {
-    enum Source
-    {
-        WebPBN
-    }
-
     class Scrapper
     {
         HttpWebRequest request;
@@ -19,11 +14,11 @@ namespace Nonogram
             
         }
 
-        public void GetFromSource(Source source, int id, TextWriter writer)
+        public void GetFromSource(PuzzleSource source, int id, TextWriter writer)
         {
             switch(source)
             {
-                case Source.WebPBN:
+                case PuzzleSource.WebPBN:
                     request = (HttpWebRequest)WebRequest.Create("https://webpbn.com/export.cgi");
                     request.Credentials = CredentialCache.DefaultCredentials;
                     request.Method = "POST";
