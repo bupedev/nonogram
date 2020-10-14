@@ -36,12 +36,18 @@ namespace Nonogram
                     WebResponse response = request.GetResponse();
 
                     // Display the status. TODO: Turn this into some kind of error check...
-                    Console.WriteLine(((HttpWebResponse)response).StatusDescription);
+                    //Console.WriteLine(((HttpWebResponse)response).StatusDescription);
 
                     using (dataStream = response.GetResponseStream())
                     {
                         StreamReader reader = new StreamReader(dataStream);
                         string responseFromServer = reader.ReadToEnd();
+
+                        if (responseFromServer.Contains("does not exist"))
+                        {
+                            throw new MissingDataException($"Puzzle {id} from \'{source}\' does not exist.");
+                        }
+
                         writer.WriteLine(responseFromServer);
                     }
                     response.Close();

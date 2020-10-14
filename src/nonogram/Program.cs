@@ -3,6 +3,8 @@ using System.IO;
 using System.Xml.Serialization;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Runtime.Serialization;
+using System.Diagnostics;
 
 namespace Nonogram
 {
@@ -34,21 +36,21 @@ namespace Nonogram
                 description: "The source of the puzzle to be solved"
             );
 
-            Option idOption = new Option<PuzzleSource>(
+            Option idOption = new Option<int>(
                 new string[] { "--id" },
                 getDefaultValue: () => 0,
                 description: "The id of the puzzle to be solved"
             );
 
-            Option outputOption = new Option<string>(
+            Option outputOption = new Option<DirectoryInfo>(
                 new string[] { "--output", "-o" },
-                getDefaultValue: () => @"./",
+                getDefaultValue: () => new DirectoryInfo(@"./"),
                 description: "The directory where output files are stored"
             );
 
-            Option inputOption = new Option<string>(
+            Option inputOption = new Option<DirectoryInfo>(
                 new string[] { "--input", "-i" },
-                getDefaultValue: () => @"./",
+                getDefaultValue: () => new DirectoryInfo(@"./"),
                 description: "The directory where input files are stored"
             );
 
@@ -64,7 +66,7 @@ namespace Nonogram
             solveCommand.AddOption(sourceOption);
             solveCommand.AddOption(idOption);
 
-            solveCommand.Handler = CommandHandler.Create<SolvingMethod, PuzzleSource, int, string, string, bool>(Solve);
+            solveCommand.Handler = CommandHandler.Create<SolvingMethod, PuzzleSource, DirectoryInfo, DirectoryInfo, int, bool>(Solve);
 
             RootCommand rootCommand = new RootCommand();
 
@@ -73,43 +75,129 @@ namespace Nonogram
             rootCommand.AddGlobalOption(verboseOption);
 
             rootCommand.AddCommand(solveCommand);
+
+            return rootCommand.InvokeAsync(args).Result;
             
-            return  rootCommand.InvokeAsync(args).Result;
         }
 
-        internal static void Solve(SolvingMethod method, PuzzleSource source, int id, string output, string input, bool verbose)
+        // #TODO:
+        //  - Document
+        //  - Implement solving method switch
+        //  - Command output
+        //  - Verbose mode
+        internal static void Solve(SolvingMethod method, PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
         {
-            // VALIDATE OUTPUT/INPUT DIRECTORY
-            // TODO: Change to DirectoryInfo...?
-
-            Scrapper scrapper = new Scrapper();
-            StringWriter xmlWritter = new StringWriter();
-
-            Directory.CreateDirectory($"{input}/resources");
-
-            using (StreamWriter writer = new StreamWriter($"resources/{id}.xml"))
+            try
             {
-                scrapper.GetFromSource(PuzzleSource.WebPBN, id, writer);
+                if (verbose)
+                {
+                    Console.WriteLine("Intialzing directories...");
+                }
+
+                input.Create();
+                output.Create();
+
+                input.CreateSubdirectory($"resources/{source.ToString().ToLower()}");
+
+                Scrapper scrapper = new Scrapper();
+                StringWriter xmlWritter = new StringWriter();
+
+                FileInfo puzzleFile = new FileInfo($"{input.FullName}resources/{source.ToString().ToLower()}/{id}.xml");
+
+                if (verbose)
+                {
+                    Console.WriteLine("Fetching puzzle from source...");
+                }
+
+                if (!puzzleFile.Exists)
+                {
+                    if (source.Equals(PuzzleSource.Local))
+                    {
+                        throw new MissingDataException($"Could not find file \'{puzzleFile.FullName}\'");
+                    }
+
+                    using (StreamWriter writer = new StreamWriter(puzzleFile.FullName))
+                    {
+                        scrapper.GetFromSource(source, id, writer);
+                    }
+                }
+
+                PuzzleSet puzzle = null;
+
+                XmlSerializer serializer = new XmlSerializer(typeof(PuzzleSet));
+
+                if (verbose)
+                {
+                    Console.WriteLine("Loading puzzle...");
+                }
+
+                string response = xmlWritter.ToString();
+                try 
+                { 
+                    using (StreamReader reader = new StreamReader(puzzleFile.FullName))
+                    {
+                        puzzle = (PuzzleSet)serializer.Deserialize(reader);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    throw new MissingDataException($"Puzzle {id} from \'{source}\' has missing or corrupt data");
+                }
+
+                GameState gameState = new GameState(puzzle.Puzzle);
+
+                Solver solver = new SequentialSolver(gameState);
+
+                if (verbose)
+                {
+                    Console.WriteLine("Solving...");
+                }
+
+                Stopwatch watch = new Stopwatch();
+
+                watch.Start();
+                solver.Solve();
+                watch.Stop();
+
+                Console.WriteLine($"{solver.Solutions.Count} solutions found in {((decimal)watch.ElapsedTicks/Stopwatch.Frequency):0.00E+00} seconds.");
+
+                foreach (GameState solution in solver.Solutions)
+                {
+                    Console.WriteLine();
+                    solution.Print();
+                }
+
+                Console.WriteLine();
+
             }
-
-            PuzzleSet puzzle = null;
-
-            XmlSerializer serializer = new XmlSerializer(typeof(PuzzleSet));
-
-            string response = xmlWritter.ToString();
-
-            using (StreamReader reader = new StreamReader($"resources/{id}.xml"))
+            catch (MissingDataException exception)
             {
-                puzzle = (PuzzleSet)serializer.Deserialize(reader);
+                Console.WriteLine($"Error: {exception.Message}");
             }
+            catch
+            {
+                Console.WriteLine($"Unknown Error");
+            }
+        }
+    }
 
-            Console.WriteLine(puzzle.Puzzle);
+    [Serializable]
+    internal class MissingDataException : Exception
+    {
+        public MissingDataException()
+        {
+        }
 
-            GameState gameState = new GameState(puzzle.Puzzle);
+        public MissingDataException(string message) : base(message)
+        {
+        }
 
-            Solver solver = new Solver(gameState);
+        public MissingDataException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
 
-            solver.Solve();
+        protected MissingDataException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
         }
     }
 }

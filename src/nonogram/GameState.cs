@@ -20,10 +20,79 @@ namespace Nonogram
     {
         public void Print()
         {
-            foreach (CellState[] row in cells)
+            const int columnWidth = 2;
+
+            int rowHintBuffer = CalculateRowHintBuffer();
+            int columnHintBuffer = CalculateColumnHintBuffer();
+
+            for (int i = columnHintBuffer; i > 0; i--)
             {
-                PrintRow(row);
+                Console.Write(new string(' ', rowHintBuffer));
+                for (int j = 0; j < columnHints.Length; j++)
+                {
+                    if (j % 2 == 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+                    //Console.WriteLine($"{columnHints[j].Length}, {i}, {columnHintBuffer - i}");
+                    if (columnHints[j].Length >= i)
+                    {
+
+                        Console.Write(columnHints[j][columnHints[j].Length - i].ToString().PadLeft(columnWidth));
+                    }
+                    else
+                    {
+                        Console.Write(new string(' ', columnWidth));
+                    }
+                }
+                Console.WriteLine();
             }
+
+            for (int i = 0; i < rowHints.Length; i++)
+            {
+                Console.Write(new string(' ', rowHintBuffer - columnWidth * rowHints[i].Length));
+                string hints = "";
+                for (int k = 0; k < rowHints[i].Length; k++)
+                {
+                    if (k % 2 == 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+                    Console.Write(rowHints[i].Counts[k].ToString().PadLeft(columnWidth));
+                }
+                Console.ForegroundColor = ConsoleColor.White;
+                PrintRow(cells[i]);
+            }
+        }
+
+        private int CalculateRowHintBuffer()
+        {
+            int max = 0;
+            for (int i = 0; i < rowHints.Length; i++)
+            {
+                int buffer = 3 * rowHints[i].Length - 1;
+                max = buffer > max ? buffer : max;
+            }
+            return max;
+        }
+
+        private int CalculateColumnHintBuffer()
+        {
+            int max = 0;
+            for (int j = 0; j < columnHints.Length; j++)
+            {
+                int buffer = columnHints[j].Length;
+                max = buffer > max ? buffer : max;
+            }
+            return max;
         }
 
         public static void PrintRow(CellState[] states)
