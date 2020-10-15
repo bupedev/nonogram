@@ -12,6 +12,7 @@ namespace Nonogram
 
         internal override void Solve()
         {
+            base.Solve();
             Solve(Board, 0);
         }
 

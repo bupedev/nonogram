@@ -16,6 +16,10 @@ namespace Nonogram
             Solutions = new List<GameState>();
         }
 
-        internal abstract void Solve();
+        internal virtual void Solve()
+        {
+            Board.Clear();
+            Solutions.Clear();
+        }
     }
 }

@@ -18,6 +18,17 @@ namespace Nonogram
     [Serializable]
     class GameState
     {
+        public void Clear()
+        {
+            for (int i = 0; i < cells.Length; i++)
+            { 
+                for (int j = 0; j < cells[0].Length; ++j)
+                {
+                    cells[i][j] = CellState.Blank;
+                }
+            }
+        }
+
         public void Print()
         {
             const int columnWidth = 2;
@@ -104,13 +115,13 @@ namespace Nonogram
                 switch (state)
                 {
                     case CellState.Blank:
-                        Console.Write(" ");
+                        Console.Write(".");
                         break;
                     case CellState.Fill:
                         Console.Write("\u25A0");
                         break;
                     case CellState.Void:
-                        Console.Write(".");
+                        Console.Write("x");
                         break;
                 }
             }

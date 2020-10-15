@@ -60,6 +60,14 @@ namespace Nonogram
                 description: "Make program report all processes"
             );
 
+            // Root command
+            RootCommand rootCommand = new RootCommand();
+
+            rootCommand.AddGlobalOption(outputOption);
+            rootCommand.AddGlobalOption(inputOption);
+            rootCommand.AddGlobalOption(verboseOption);
+
+            // Solve command
             Command solveCommand = new Command("solve");
 
             solveCommand.AddOption(methodOption);
@@ -68,98 +76,78 @@ namespace Nonogram
 
             solveCommand.Handler = CommandHandler.Create<SolvingMethod, PuzzleSource, DirectoryInfo, DirectoryInfo, int, bool>(Solve);
 
-            RootCommand rootCommand = new RootCommand();
+            // Play command
+            Command playCommand = new Command("play");
 
-            rootCommand.AddGlobalOption(outputOption);
-            rootCommand.AddGlobalOption(inputOption);
-            rootCommand.AddGlobalOption(verboseOption);
+            playCommand.AddOption(sourceOption);
+            playCommand.AddOption(idOption);
+
+            playCommand.Handler = CommandHandler.Create<PuzzleSource, DirectoryInfo, DirectoryInfo, int, bool>(Play);
 
             rootCommand.AddCommand(solveCommand);
+            rootCommand.AddCommand(playCommand);
 
             return rootCommand.InvokeAsync(args).Result;
             
+        }
+
+        internal static void Play(PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
+        {
+            try 
+            {
+                GameState gameState = GetPuzzle(source, output, input, id, verbose);
+
+                throw new NotImplementedException();
+            }
+            catch (MissingDataException exception)
+            {
+                Logging.Error(exception.Message);
+            }
+            catch (NotImplementedException)
+            {
+                Logging.Error("Feature not implemented.");
+            }
+            catch(Exception exception)
+            {
+                #if DEBUG
+                    Logging.Error("Unexpected exception");
+                    Console.WriteLine(exception);
+                #else
+                    Logging.Error("Unknown");
+                #endif
+            }
         }
 
         // #TODO:
         //  - Document
         //  - Implement solving method switch
         //  - Command output
-        //  - Verbose mode
         internal static void Solve(SolvingMethod method, PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
         {
             try
             {
-                if (verbose)
+                GameState gameState = GetPuzzle(source, output, input, id, verbose);
+
+                Solver solver;
+
+                switch (method)
                 {
-                    Console.WriteLine("Intialzing directories...");
+                    case SolvingMethod.Sequential:
+                        solver = new SequentialSolver(gameState);
+                        break;
+                    case SolvingMethod.Parallel:
+                        solver = new ParallelSolver(gameState);
+                        break;
+                    default:
+                        solver = new SequentialSolver(gameState);
+                        break;
                 }
 
-                input.Create();
-                output.Create();
+                Logging.Message($"Attempting to solve using {method} solver...", verbose);
 
-                input.CreateSubdirectory($"resources/{source.ToString().ToLower()}");
+                decimal timeElapsed = TimeSolverAverage(solver, 1);
 
-                Scrapper scrapper = new Scrapper();
-                StringWriter xmlWritter = new StringWriter();
-
-                FileInfo puzzleFile = new FileInfo($"{input.FullName}resources/{source.ToString().ToLower()}/{id}.xml");
-
-                if (verbose)
-                {
-                    Console.WriteLine("Fetching puzzle from source...");
-                }
-
-                if (!puzzleFile.Exists)
-                {
-                    if (source.Equals(PuzzleSource.Local))
-                    {
-                        throw new MissingDataException($"Could not find file \'{puzzleFile.FullName}\'");
-                    }
-
-                    using (StreamWriter writer = new StreamWriter(puzzleFile.FullName))
-                    {
-                        scrapper.GetFromSource(source, id, writer);
-                    }
-                }
-
-                PuzzleSet puzzle = null;
-
-                XmlSerializer serializer = new XmlSerializer(typeof(PuzzleSet));
-
-                if (verbose)
-                {
-                    Console.WriteLine("Loading puzzle...");
-                }
-
-                string response = xmlWritter.ToString();
-                try 
-                { 
-                    using (StreamReader reader = new StreamReader(puzzleFile.FullName))
-                    {
-                        puzzle = (PuzzleSet)serializer.Deserialize(reader);
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    throw new MissingDataException($"Puzzle {id} from \'{source}\' has missing or corrupt data");
-                }
-
-                GameState gameState = new GameState(puzzle.Puzzle);
-
-                Solver solver = new SequentialSolver(gameState);
-
-                if (verbose)
-                {
-                    Console.WriteLine("Solving...");
-                }
-
-                Stopwatch watch = new Stopwatch();
-
-                watch.Start();
-                solver.Solve();
-                watch.Stop();
-
-                Console.WriteLine($"{solver.Solutions.Count} solutions found in {((decimal)watch.ElapsedTicks/Stopwatch.Frequency):0.00E+00} seconds.");
+                Logging.Message($"{solver.Solutions.Count} solution(s) found in {timeElapsed:0.00E+00} seconds:");
 
                 foreach (GameState solution in solver.Solutions)
                 {
@@ -168,15 +156,151 @@ namespace Nonogram
                 }
 
                 Console.WriteLine();
-
             }
             catch (MissingDataException exception)
             {
-                Console.WriteLine($"Error: {exception.Message}");
+                Logging.Error(exception.Message);
             }
-            catch
+            catch (NotImplementedException)
             {
-                Console.WriteLine($"Unknown Error");
+                Logging.Error("Feature not implemented.");
+            }
+            catch(Exception exception)
+            {
+                #if DEBUG
+                    Logging.Error("Unexpected exception");
+                    Console.WriteLine(exception);
+                #else
+                    Logging.Error("Unknown");
+                #endif
+            }
+        }
+
+        private static decimal TimeSolverAverage(Solver solver, int trials)
+        {
+            decimal[] times = TimeSolverComplete(solver, trials);
+
+            decimal totalTime = 0;
+            foreach (decimal time in times)
+            {
+                totalTime += time;
+            }
+            return totalTime / trials;
+        }
+
+        private static decimal[] TimeSolverComplete(Solver solver, int trials)
+        {
+            Stopwatch watch = new Stopwatch();
+
+            decimal[] times = new decimal[trials];
+            for (int i = 0; i < trials; i++)
+            {
+                watch.Start();
+                solver.Solve();
+                watch.Stop();
+
+                times[i] = (decimal) watch.ElapsedTicks / Stopwatch.Frequency;
+            }
+
+            return times;
+        }
+
+        private static GameState GetPuzzle(PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
+        {
+            InitializeDirectories(input, output, new string[] { $"resources/{source.ToString().ToLower()}" }, null, verbose);
+
+            FileInfo puzzleFile = new FileInfo($"{input.FullName}resources/{source.ToString().ToLower()}/{id}.xml");
+
+            FetchPuzzle(source, id, puzzleFile, verbose);
+
+            return LoadPuzzle(puzzleFile, verbose);
+        }
+
+        private static GameState LoadPuzzle(FileInfo puzzleFile, bool verbose)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(PuzzleSet));
+            PuzzleSet puzzle = null;
+
+            Logging.Message($"Loading puzzle from {puzzleFile.FullName}...", verbose);
+
+            try
+            {
+                using (StreamReader reader = new StreamReader(puzzleFile.FullName))
+                {
+                    puzzle = (PuzzleSet)serializer.Deserialize(reader);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                throw new MissingDataException($"{puzzleFile.FullName} has missing or corrupt data.");
+            }
+
+            return new GameState(puzzle.Puzzle);
+        }
+
+        private static void FetchPuzzle(PuzzleSource source, int id, FileInfo fileStore, bool verbose)
+        {
+            Scrapper scrapper = new Scrapper();
+
+            Logging.Message($"Fetching puzzle from source ({source})...", verbose);
+
+            if (!fileStore.Exists)
+            {
+                if (source.Equals(PuzzleSource.Local))
+                {
+                    throw new MissingDataException($"File not found: {fileStore.FullName}\'");
+                }
+
+                using (StreamWriter writer = new StreamWriter(fileStore.FullName))
+                {
+                    scrapper.GetFromSource(source, id, writer);
+                }
+            }
+        }
+
+        private static void InitializeDirectories(DirectoryInfo input, DirectoryInfo output, string[] inputSubDirectories, string[] outputSubDirectories, bool verbose)
+        {
+            Logging.Message("Intialzing directories...", verbose);
+
+            input.Refresh();
+            output.Refresh();
+
+            if (!input.Exists)
+            {
+                Logging.Message($"Creating {input.FullName}...", verbose);
+                input.Create();
+            }
+
+            if (!output.Exists)
+            {
+                Logging.Message($"Creating {output.FullName}...", verbose);
+                output.Create();
+            }
+
+            if (inputSubDirectories != null)
+            { 
+                foreach (string subdirectory in inputSubDirectories)
+                {
+                    if (!File.Exists($"{input.FullName}{subdirectory}"))
+                    {
+                        DirectoryInfo directoryInfo = new DirectoryInfo($"{input.FullName}{subdirectory}");
+                        Logging.Message($"Creating {directoryInfo.FullName}...", verbose);
+                        directoryInfo.Create();
+                    }
+                }
+            }
+
+            if (outputSubDirectories != null)
+            { 
+                foreach (string subDirectory in outputSubDirectories)
+                {
+                    if (!File.Exists($"{output.FullName}{subDirectory}"))
+                    {
+                        DirectoryInfo directoryInfo = new DirectoryInfo($"{output.FullName}{subDirectory}");
+                        Logging.Message($"Creating {directoryInfo}...", verbose);
+                        directoryInfo.Create();
+                    }
+                }
             }
         }
     }
