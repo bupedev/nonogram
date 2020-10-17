@@ -28,20 +28,14 @@ namespace Nonogram
                 {
                     if (!newGameState.IsColumnValid(j))
                     {
-                        //Console.WriteLine("False Permutation");
-                        //Console.WriteLine(newGameState);
-                        //Console.WriteLine();
                         validPermutation = false;
-                        break;
+                        break; 
                     }
                 }
                 if (validPermutation)
                 {
                     if (row == Board.Height - 1)
                     {
-                        //Console.WriteLine("Valid Solution");
-                        //newGameState.Print();
-                        //Console.WriteLine();
                         Solutions.Add(newGameState);
                     }
                     else
