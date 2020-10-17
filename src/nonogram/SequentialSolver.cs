@@ -21,18 +21,10 @@ namespace Nonogram
             GenerateLinePermutations(out List<CellState[]> permutations, Board.RowHints[row], Board.Width);
             foreach (CellState[] permutation in permutations)
             {
-                GameState newGameState = gameState.DeepClone();
+                GameState newGameState = gameState.Clone() as GameState;
                 newGameState[row] = permutation;
-                bool validPermutation = true;
-                for (int j = 0; j < Board.Width; ++j)
-                {
-                    if (!newGameState.IsColumnValid(j))
-                    {
-                        validPermutation = false;
-                        break; 
-                    }
-                }
-                if (validPermutation)
+                
+                if (ValidatePermutation(newGameState))
                 {
                     if (row == Board.Height - 1)
                     {
@@ -44,6 +36,18 @@ namespace Nonogram
                     }
                 }
             }
+        }
+
+        internal bool ValidatePermutation(GameState gameState)
+        {
+            for (int j = 0; j < Board.Width; ++j)
+            {
+                if (!gameState.IsColumnValid(j))
+                {
+                    return false; 
+                }
+            }
+            return true;
         }
 
         internal static void GenerateLinePermutations(out List<CellState[]> permutations, Hint hint, int lineLength)
