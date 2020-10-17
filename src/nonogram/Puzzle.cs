@@ -123,7 +123,7 @@ namespace Nonogram
         {
             get 
             {
-                return Counts.Length;
+                return Counts == null ? 0 : Counts.Length;
             }
         }
 

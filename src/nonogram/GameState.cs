@@ -282,7 +282,8 @@ namespace Nonogram
             bool blockLock = false;
             bool voidLock = false;
 
-            int voidCountLimit = Height - columnHints[j].Occupation(x);
+            // #TODO: Find a better way of dealing with blank lines
+            int voidCountLimit = Height - (columnHints[j].Length == 0 ? 0 :columnHints[j].Occupation(x));
 
             for (int i = 0; i < cells.Length; ++i)
             {
