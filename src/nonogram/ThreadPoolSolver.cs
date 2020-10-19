@@ -59,6 +59,6 @@ namespace Nonogram
     {
         GameState gameState;
         int targetRow;
-        int threadNumber;
+        int threadNumber;  
     }
 }
