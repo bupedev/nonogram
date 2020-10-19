@@ -11,7 +11,7 @@ namespace Nonogram
     internal enum SolvingMethod
     { 
         Sequential,
-        Parallel
+        ThreadPool
     }
 
     internal enum PuzzleSource
@@ -135,8 +135,8 @@ namespace Nonogram
                     case SolvingMethod.Sequential:
                         solver = new SequentialSolver(gameState);
                         break;
-                    case SolvingMethod.Parallel:
-                        solver = new ParallelSolver(gameState);
+                    case SolvingMethod.ThreadPool:
+                        solver = new ThreadPoolSolver(gameState);
                         break;
                     default:
                         solver = new SequentialSolver(gameState);
