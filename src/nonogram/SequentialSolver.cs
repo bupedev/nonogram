@@ -18,6 +18,8 @@ namespace Nonogram
 
         internal void Solve(GameState gameState, int row)
         {
+            if (Solutions.Count > 0) return;
+
             GenerateLinePermutations(out List<CellState[]> permutations, Board.RowHints[row], Board.Width);
             foreach (CellState[] permutation in permutations)
             {
@@ -29,6 +31,7 @@ namespace Nonogram
                     if (row == Board.Height - 1)
                     {
                         Solutions.Add(newGameState);
+                        return;
                     }
                     else
                     {

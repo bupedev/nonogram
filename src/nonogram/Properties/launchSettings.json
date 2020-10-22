@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "nonogram": {
+      "commandName": "Project",
+      "commandLineArgs": "solve --id 8 --method sequential --verbose"
+    }
+  }
+}

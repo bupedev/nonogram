@@ -18,6 +18,26 @@ namespace Nonogram
     [Serializable]
     class GameState : ICloneable
     {
+        private int targetRow;
+
+        internal int TargetRow => targetRow;
+        internal Hint TargetRowHint => rowHints[targetRow];
+
+        internal void SetTargetRow(CellState[] row)
+        {
+            cells[targetRow] = row;
+        }
+
+        internal void IncrementRowTarget()
+        {
+            targetRow++;
+        }
+
+        internal bool IsFinal()
+        {
+            return targetRow == Height;
+        }
+
         CellState[][] cells;
         HintSet rowHints, columnHints;
 
@@ -55,11 +75,12 @@ namespace Nonogram
 
         public HintSet ColumnHints => columnHints;
 
-        public GameState(CellState[][] cells, HintSet rowHints, HintSet columnHints)
+        public GameState(CellState[][] cells, HintSet rowHints, HintSet columnHints, int targetRow = 0)
         {
             this.cells = cells;
             this.rowHints = rowHints;
             this.columnHints = columnHints;
+            this.targetRow = targetRow;
         }
 
         public GameState(Puzzle puzzle)
@@ -476,7 +497,7 @@ namespace Nonogram
 
         public object Clone()
         {
-            return new GameState(cells.Clone() as CellState[][], rowHints, columnHints);
+            return new GameState(cells.Clone() as CellState[][], rowHints, columnHints, targetRow);
         }
     }
 }

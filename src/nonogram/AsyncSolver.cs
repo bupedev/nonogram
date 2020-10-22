@@ -1,25 +1,26 @@
-﻿using Nonogram;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Nonogram
 {
-    internal class ParallelSolver : Solver
+    internal class AsyncSolver : Solver
     {
-        internal ParallelSolver(GameState gameState) : base(gameState)
+        internal AsyncSolver(GameState gameState) : base(gameState)
         { }
 
-        internal override void Solve()
+        internal async override void Solve()
         {
             base.Solve();
-            FindSolutions(Board, GetGameStates);
+            await FindSolutions(new[] { Board }, GetGameStates);
+
         }
 
         private static IEnumerable<GameState> GetGameStates(GameState gameState, int row)
-        {
+        {  
             GenerateLinePermutations(out List<CellState[]> permutations, gameState.RowHints[row], gameState.Width);
             foreach (CellState[] permutation in permutations)
             {
@@ -29,30 +30,25 @@ namespace Nonogram
             }
         }
 
-        private void FindSolutions(GameState source, Func<GameState, int, IEnumerable<GameState>> stateSelector)
+        private async Task FindSolutions(IEnumerable<GameState> source, Func<GameState, int, IEnumerable<GameState>> stateSelector)
         {
-            Action<GameState> foo = null;
-            foo = (state) =>
+            Func<GameState, int, Task> foo = null;
+            foo = async (state, row) =>
             {
-                if (Solutions.Count > 0) return;
-
                 if (ValidatePermutation(state))
                 {
-                    if (state.IsFinal())
+                    if (row == state.Height)
                     {
                         Solutions.Add(state);
-                        return;
                     }
                     else
-                    {
-                        var states = stateSelector(state, state.TargetRow);
-                        state.IncrementRowTarget();
-                        Parallel.ForEach(states, new ParallelOptions { MaxDegreeOfParallelism = -1 }, (subState) => foo(subState));
+                    { 
+                        var states = stateSelector(state, row++);
+                        await Task.WhenAll(states.Select(subState => foo(subState, row)));
                     }
                 }
             };
-            foo(source);
+            await Task.WhenAll(source.Select(subState => foo(subState, 0)));
         }
     }
 }
-

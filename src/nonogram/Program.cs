@@ -11,7 +11,9 @@ namespace Nonogram
     internal enum SolvingMethod
     { 
         Sequential,
-        ThreadPool
+        Parallel,
+        Async,
+        ManagedParallel
     }
 
     internal enum PuzzleSource
@@ -87,8 +89,15 @@ namespace Nonogram
             rootCommand.AddCommand(solveCommand);
             rootCommand.AddCommand(playCommand);
 
-            return rootCommand.InvokeAsync(args).Result;
-            
+            int id = 45;
+
+            Solve(SolvingMethod.Sequential, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 29, true);
+            //Solve(SolvingMethod.Async, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 10, true);
+            Solve(SolvingMethod.ManagedParallel, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 29, true);
+
+            return 0;
+
+            //return rootCommand.InvokeAsync(args).Result;
         }
 
         internal static void Play(PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
@@ -135,8 +144,14 @@ namespace Nonogram
                     case SolvingMethod.Sequential:
                         solver = new SequentialSolver(gameState);
                         break;
-                    case SolvingMethod.ThreadPool:
-                        solver = new ThreadPoolSolver(gameState);
+                    case SolvingMethod.Parallel:
+                        solver = new ParallelSolver(gameState);
+                        break;
+                    case SolvingMethod.ManagedParallel:
+                        solver = new ManagedParallelSolver(gameState);
+                        break;
+                    case SolvingMethod.Async:
+                        solver = new AsyncSolver(gameState);
                         break;
                     default:
                         solver = new SequentialSolver(gameState);

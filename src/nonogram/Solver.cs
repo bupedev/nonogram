@@ -2,18 +2,19 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Collections.Concurrent;
 
 namespace Nonogram
 {
     internal abstract class Solver
     {
         internal GameState Board { get; }
-        internal List<GameState> Solutions { get; }
+        internal ConcurrentBag<GameState> Solutions { get; }
 
         internal Solver(GameState board)
         {
             Board = board;
-            Solutions = new List<GameState>();
+            Solutions = new ConcurrentBag<GameState>();
         }
 
         internal virtual void Solve()
@@ -40,7 +41,7 @@ namespace Nonogram
             GenerateLinePermutations(permutations, hint, new CellState[lineLength], 0, 0);
         }
 
-        private static void GenerateLinePermutations(List<CellState[]> permutations, Hint hint, CellState[] states, int hintIdx, int posIdx)
+        protected static void GenerateLinePermutations(List<CellState[]> permutations, Hint hint, CellState[] states, int hintIdx, int posIdx)
         {
             if (hintIdx >= hint.Length)
             {
