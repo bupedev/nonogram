@@ -89,11 +89,11 @@ namespace Nonogram
             rootCommand.AddCommand(solveCommand);
             rootCommand.AddCommand(playCommand);
 
-            int id = 45;
+            int id = 30;
 
-            Solve(SolvingMethod.Sequential, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 29, true);
+            Solve(SolvingMethod.Sequential, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), id, true);
             //Solve(SolvingMethod.Async, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 10, true);
-            Solve(SolvingMethod.ManagedParallel, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 29, true);
+            Solve(SolvingMethod.ManagedParallel, PuzzleSource.WebPBN, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), id, true);
 
             return 0;
 
@@ -148,7 +148,7 @@ namespace Nonogram
                         solver = new ParallelSolver(gameState);
                         break;
                     case SolvingMethod.ManagedParallel:
-                        solver = new ManagedParallelSolver(gameState);
+                        solver = new ManagedThreadPoolSolver(gameState);
                         break;
                     case SolvingMethod.Async:
                         solver = new AsyncSolver(gameState);
@@ -160,7 +160,7 @@ namespace Nonogram
 
                 Logging.Message($"Attempting to solve using {method} solver...", verbose);
 
-                decimal timeElapsed = TimeSolverAverage(solver, 1);
+                decimal timeElapsed = TimeSolverAverage(solver, 10);
 
                 Logging.Message($"{solver.Solutions.Count} solution(s) found in {timeElapsed:0.00E+00} seconds:");
 

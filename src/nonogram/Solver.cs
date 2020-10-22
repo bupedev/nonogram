@@ -23,7 +23,18 @@ namespace Nonogram
             Solutions.Clear();
         }
 
-        protected static bool ValidatePermutation(GameState gameState)
+        internal static IEnumerable<GameState> GetSubStates(GameState gameState, int row)
+        {
+            GenerateLinePermutations(out List<CellState[]> permutations, gameState.RowHints[row], gameState.Width);
+            foreach (CellState[] permutation in permutations)
+            {
+                GameState newState = gameState.Clone() as GameState;
+                newState[row] = permutation;
+                yield return newState;
+            }
+        }
+
+        internal static bool ValidatePermutation(GameState gameState)
         {
             for (int j = 0; j < gameState.Width; ++j)
             {
