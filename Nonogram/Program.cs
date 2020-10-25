@@ -8,16 +8,14 @@ using System.Diagnostics;
 using System.Threading;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Nonogram
 {
     internal enum SolvingMethod
     { 
         Sequential,
-        Parallel,
-        Async,
-        ManagedParallel,
-        ThreadPool
+        Parallel
     }
 
     internal enum PuzzleSource
@@ -38,7 +36,7 @@ namespace Nonogram
 
             Option methodsOption = new Option<SolvingMethod[]>(
                 new string[] { "--methods", "-mx" },
-                getDefaultValue: () => new[] { SolvingMethod.Sequential, SolvingMethod.ThreadPool },
+                getDefaultValue: () => new[] { SolvingMethod.Sequential, SolvingMethod.Parallel },
                 description: "The methods used to benchmark the nonogram"
             );
 
@@ -128,7 +126,7 @@ namespace Nonogram
             benchmarkCommand.AddOption(idSetOption);
             benchmarkCommand.AddOption(trialsOption);
 
-            benchmarkCommand.Handler = CommandHandler.Create<SolvingMethod[], DirectoryInfo, DirectoryInfo, string, int, int, bool> (Benchmark);
+            benchmarkCommand.Handler = CommandHandler.Create<SolvingMethod[], DirectoryInfo, DirectoryInfo, string, int, int, bool>(Benchmark);
 
             rootCommand.AddCommand(benchmarkCommand);
             rootCommand.AddCommand(solveCommand);
@@ -136,8 +134,6 @@ namespace Nonogram
 
             //Solve(SolvingMethod.Sequential, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 48, 1, 100000, true);
             //Solve(SolvingMethod.ManagedParallel, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 48, 8, 100000, true);
-
-            //return 0;
 
             return rootCommand.InvokeAsync(args).Result;
         }
@@ -171,7 +167,7 @@ namespace Nonogram
 
         internal static void Solve(SolvingMethod method, DirectoryInfo output, DirectoryInfo input, int id, int threads, int timeout, bool verbose)
         {
-            PuzzleSource source = PuzzleSource.WebPBN;
+            PuzzleSource source = PuzzleSource.Local;
 
             try
             {
@@ -182,22 +178,13 @@ namespace Nonogram
                 switch (method)
                 {
                     case SolvingMethod.Sequential:
-                        solver = new SequentialSolver(gameState);
+                        solver = new SequentialSolver(gameState,true);
                         break;
                     case SolvingMethod.Parallel:
-                        solver = new ParallelSolver(gameState);
-                        break;
-                    case SolvingMethod.ManagedParallel:
-                        solver = new ManagedParallelSolver(gameState);
-                        break;
-                    case SolvingMethod.ThreadPool:
-                        solver = new ThreadPoolSolver(gameState, threads, timeout);
-                        break;
-                    case SolvingMethod.Async:
-                        solver = new AsyncSolver(gameState);
+                        solver = new ThreadPoolSolver(gameState, false, threads, timeout);
                         break;
                     default:
-                        solver = new SequentialSolver(gameState);
+                        solver = new SequentialSolver(gameState, true);
                         break;
                 }
 
@@ -214,7 +201,7 @@ namespace Nonogram
                     timeElapsed = TimeSolverAverage(solver, 1);
                 }
 
-                Logging.Message($"{solver.Solutions.Count} solution(s) found in {timeElapsed:0.00E+00} seconds:");
+                Logging.Message($"{solver.Solutions.Count( x => true )} solution(s) found in {timeElapsed:0.00E+00} seconds:");
 
                 foreach (GameState solution in solver.Solutions)
                 {
@@ -270,23 +257,11 @@ namespace Nonogram
                 {
                     gameState = GetPuzzle(source, output, input, id, verbose);
 
-                    //Solver timeoutSolver = new ManagedThreadPoolSolver(gameState, Environment.ProcessorCount, timeout);
-
-                    //double time = TimeSolverAverage(timeoutSolver, 1, Environment.ProcessorCount);
-                    //if (timeoutSolver.Solutions.TryPeek(out GameState solution))
-                    //{ 
-                    //    if (solution == null)
-                    //    {
-                    //        throw new NonogramException("Puzzle solution doesn't exist or timed out!");
-                    //    }
-
-                    //}
-
                     foreach (SolvingMethod method in methods)
                     {
                         if (method.Equals(SolvingMethod.Sequential))
                         {
-                            Solver solver = new SequentialSolver(gameState);
+                            Solver solver = new SequentialSolver(gameState, true);
 
                             Logging.Message($"Attempting to solve puzzle #{id} using {method} solver...");
 
@@ -304,11 +279,11 @@ namespace Nonogram
                                 switch (method)
                                 {
                                     // others can go in here once they have the appropriate interface (gameState, threadCount, timeout)
-                                    case SolvingMethod.ThreadPool:
-                                        solver = new ThreadPoolSolver(gameState, threadCount, timeout);
+                                    case SolvingMethod.Parallel:
+                                        solver = new ThreadPoolSolver(gameState, true, threadCount, timeout);
                                         break;
                                     default:
-                                        solver = new ThreadPoolSolver(gameState, threadCount, timeout);
+                                        solver = new ThreadPoolSolver(gameState, true, threadCount, timeout);
                                         break;
                                 }
 

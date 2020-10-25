@@ -4,38 +4,49 @@ using System.Text;
 
 namespace Nonogram
 {
+    /// <summary>
+    /// #TODO: Document
+    /// </summary>
     internal class SequentialSolver : Solver
     {
-        internal SequentialSolver(GameState board) : base(board)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="board"></param>
+        internal SequentialSolver(GameState board, bool solveAll) : base(board, solveAll)
         {
         }
 
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
         internal override void Solve()
         {
             base.Solve();
-            Solve(Board, 0);
+            Solve(initialState);
         }
 
-        internal void Solve(GameState gameState, int row)
+        /// <summary>
+        /// #TODO: Document, Clean
+        /// </summary>
+        /// <param name="gameState"></param>
+        /// <param name="row"></param>
+        private void Solve(GameState state)
         {
-            if (Solutions.Count > 0) return;
+            if (!solveAll && solutions.Count > 0) return;
 
-            GenerateLinePermutations(out List<CellState[]> permutations, Board.RowHints[row], Board.Width);
-            foreach (CellState[] permutation in permutations)
+            foreach (GameState subState in StatePermutations(state))
             {
-                GameState newGameState = gameState.Clone() as GameState;
-                newGameState[row] = permutation;
-                
-                if (ValidatePermutation(newGameState))
+                if (ValidatePermutation(subState))
                 {
-                    if (row == Board.Height - 1)
+                    if (subState.IsFinal())
                     {
-                        Solutions.Add(newGameState);
+                        solutions.Add(subState);
                         return;
                     }
                     else
                     {
-                        Solve(newGameState, row + 1);
+                        Solve(subState);
                     }
                 }
             }

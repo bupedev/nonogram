@@ -6,34 +6,50 @@ using System.Collections.Concurrent;
 
 namespace Nonogram
 {
+    /// <summary>
+    /// #TODO: Document
+    /// </summary>
     internal abstract class Solver
     {
-        internal GameState Board { get; }
-        internal ConcurrentBag<GameState> Solutions { get; }
+        protected ConcurrentBag<GameState> solutions;
+        protected GameState initialState;
+        protected bool solveAll;
 
-        internal Solver(GameState board)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        internal GameState InitialState => initialState;
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        internal IEnumerable<GameState> Solutions => solutions;
+
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="initialState"></param>
+        internal Solver(GameState initialState, bool solveAll)
         {
-            Board = board;
-            Solutions = new ConcurrentBag<GameState>();
+            this.solutions = new ConcurrentBag<GameState>();
+
+            this.initialState = initialState;
+            this.solveAll = solveAll;
         }
 
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
         internal virtual void Solve()
         {
-            Board.Clear();
-            Solutions.Clear();
+            initialState.Clear();
+            solutions.Clear();
         }
 
-        internal static IEnumerable<GameState> GetSubStates(GameState gameState, int row)
-        {
-            GenerateLinePermutations(out List<CellState[]> permutations, gameState.RowHints[row], gameState.Width);
-            foreach (CellState[] permutation in permutations)
-            {
-                GameState newState = gameState.Clone() as GameState;
-                newState[row] = permutation;
-                yield return newState;
-            }
-        }
-
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="gameState"></param>
+        /// <returns></returns>
         internal static bool ValidatePermutation(GameState gameState)
         {
             for (int j = 0; j < gameState.Width; ++j)
@@ -46,29 +62,63 @@ namespace Nonogram
             return true;
         }
 
-        protected static void GenerateLinePermutations(out List<CellState[]> permutations, Hint hint, int lineLength)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="gameState"></param>
+        /// <param name="row"></param>
+        /// <returns></returns>
+        internal static IEnumerable<GameState> StatePermutations(GameState gameState)
         {
-            permutations = new List<CellState[]>();
-            GenerateLinePermutations(permutations, hint, new CellState[lineLength], 0, 0);
+            foreach (CellState[] permutation in RowPermutations(gameState.RowHints[gameState.TargetRow], gameState.Width))
+            {
+                GameState newState = gameState.Clone() as GameState;
+                newState.SetTargetRow(permutation);
+                yield return newState;
+            }
         }
 
-        protected static void GenerateLinePermutations(List<CellState[]> permutations, Hint hint, CellState[] states, int hintIdx, int posIdx)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="hint"></param>
+        /// <param name="lineLength"></param>
+        /// <returns></returns>
+        public static IEnumerable<CellState[]> RowPermutations(Hint hint, int lineLength)
         {
-            if (hintIdx >= hint.Length)
+            return GenerateLinePermutations(hint, new CellState[lineLength], 0, 0);
+        }
+
+        /// <summary>
+        /// #TODO: Document, Clean
+        /// </summary>
+        /// <param name="hint"></param>
+        /// <param name="progressiveState"></param>
+        /// <param name="hintIndex"></param>
+        /// <param name="positionIndex"></param>
+        /// <returns></returns>
+        protected static IEnumerable<CellState[]> GenerateLinePermutations(Hint hint, CellState[] progressiveState, int hintIndex, int positionIndex)
+        {
+            if (hintIndex >= hint.Length)
             {
-                permutations.Add(states);
-                return;
+                yield return progressiveState;
             }
-            int k = states.Length - (hint.Occupation(hintIdx + 1) + hint[hintIdx]) - posIdx;
-            for (int i = posIdx; i < posIdx + k; i++)
-            {
-                CellState[] newState = new CellState[states.Length];
-                states.CopyTo(newState, 0);
-                for (int j = 0; j < hint[hintIdx]; ++j)
+            else
+            { 
+                int k = progressiveState.Length - (hint.Occupation(hintIndex + 1) + hint[hintIndex]) - positionIndex;
+                for (int i = positionIndex; i < positionIndex + k; i++)
                 {
-                    newState[i + j] = CellState.Fill;
+                    CellState[] newState = new CellState[progressiveState.Length];
+                    progressiveState.CopyTo(newState, 0);
+                    for (int j = 0; j < hint[hintIndex]; ++j)
+                    {
+                        newState[i + j] = CellState.Fill;
+                    }
+                    foreach (var t in GenerateLinePermutations(hint, newState, hintIndex + 1, i + hint[hintIndex] + 1))
+                    { 
+                        yield return t;
+                    }
                 }
-                GenerateLinePermutations(permutations, hint, newState, hintIdx + 1, i + hint[hintIdx] + 1);
             }
         }
     }

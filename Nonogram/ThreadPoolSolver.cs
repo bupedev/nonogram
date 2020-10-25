@@ -1,43 +1,31 @@
 ﻿
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
 namespace Nonogram
 {
+    /// <summary>
+    /// #TODO: Document
+    /// </summary>
     internal class ThreadPoolSolver : Solver
-    {
-        private int maxThreads;
-        private int timeout;
-
-        internal ThreadPoolSolver(GameState gameState, int maxThreads, int timeout) : base(gameState)
-        {
-            this.maxThreads = maxThreads;
-            this.timeout = timeout;
-        }
-
-        internal override void Solve()
-        {
-            base.Solve();
-            SolverThreadPoolHandler handler = new SolverThreadPoolHandler(maxThreads, 8, timeout);
-            handler.Start(Board);
-            Solutions.Add(handler.Solution);
-        }
-    }
-
-    internal class SolverThreadPoolHandler
     {
         private ManualResetEvent terminateEvent = new ManualResetEvent(false);
 
-        private GameState solution;
         private int maxThreads;
         private long maxThreadQueue;
         private int timeout;
 
-        internal GameState Solution => solution;
-
-        internal SolverThreadPoolHandler(int maxThreads, int maxThreadQueue, int timeout)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="gameState"></param>
+        /// <param name="maxThreads"></param>
+        /// <param name="timeout"></param>
+        internal ThreadPoolSolver(GameState gameState, bool solveAll, int maxThreads, int timeout, long maxThreadQueue = 0) 
+            : base(gameState, solveAll)
         {
             this.maxThreads = maxThreads;
             this.maxThreadQueue = maxThreadQueue;
@@ -47,45 +35,53 @@ namespace Nonogram
             ThreadPool.SetMaxThreads(maxThreads, maxThreads);
         }
 
-        internal void Start(GameState state)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        internal override void Solve()
         {
-            ThreadPool.QueueUserWorkItem(Solve, state);
+            base.Solve();
+
+            ThreadPool.QueueUserWorkItem(SolveCallback, initialState);
             terminateEvent.WaitOne(timeout);
             terminateEvent.Set();
         }
 
-        private void Solve(object state)
+        /// <summary>
+        /// #TODO: Document
+        /// </summary>
+        /// <param name="state"></param>
+        private void SolveCallback(object obj)
         {
-            Solve((GameState)state);
-        }
+            GameState state = obj as GameState;
 
-        private void Solve(GameState state)
-        {
-            if(terminateEvent.WaitOne(0))
+            if (!solveAll && terminateEvent.WaitOne(0))
                 return;
 
-            IEnumerable<GameState> subStates = Solver.GetSubStates(state, state.TargetRow);
-            state.IncrementRowTarget();
+            IEnumerable<GameState> subStates = StatePermutations(state);
 
             foreach (GameState subState in subStates)
             {
-                if (Solver.ValidatePermutation(subState))
+                if (ValidatePermutation(subState))
                 {
                     if (subState.IsFinal())
                     {
-                        solution = subState;
-                        terminateEvent.Set();
+                        solutions.Add(subState);
+                        if (!solveAll)
+                        {
+                            terminateEvent.Set();
+                        }
                         return;
                     }
                     else
                     {
                         if (ThreadPool.PendingWorkItemCount <= maxThreadQueue)
                         {
-                            ThreadPool.QueueUserWorkItem(Solve, subState);
+                            ThreadPool.QueueUserWorkItem(SolveCallback, subState);
                         }
                         else
                         {
-                            Solve(subState);
+                            SolveCallback(subState);
                         }
                     }
                 }

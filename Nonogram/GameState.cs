@@ -25,7 +25,7 @@ namespace Nonogram
 
         internal void SetTargetRow(CellState[] row)
         {
-            cells[targetRow] = row;
+            cells[targetRow++] = row;
         }
 
         internal void IncrementRowTarget()

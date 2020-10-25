@@ -3,38 +3,21 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30204.135
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{62600618-7EEB-4662-AE8F-2D923514B9FF}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "nonogram", "src\nonogram\nonogram.csproj", "{7628191F-A690-43AB-A4C0-C12F8537921C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nonogram", "Nonogram\Nonogram.csproj", "{1111C286-E622-45C4-9D24-6D96A9EAD49C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|x64.Build.0 = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Debug|x86.Build.0 = Debug|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|x64.ActiveCfg = Release|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|x64.Build.0 = Release|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|x86.ActiveCfg = Release|Any CPU
-		{7628191F-A690-43AB-A4C0-C12F8537921C}.Release|x86.Build.0 = Release|Any CPU
+		{1111C286-E622-45C4-9D24-6D96A9EAD49C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1111C286-E622-45C4-9D24-6D96A9EAD49C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1111C286-E622-45C4-9D24-6D96A9EAD49C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1111C286-E622-45C4-9D24-6D96A9EAD49C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{7628191F-A690-43AB-A4C0-C12F8537921C} = {62600618-7EEB-4662-AE8F-2D923514B9FF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5F2F193A-8AC3-47BB-8456-BFC6CB3B3687}
