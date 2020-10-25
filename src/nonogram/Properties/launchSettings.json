@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "nonogram": {
-      "commandName": "Project",
-      "commandLineArgs": "benchmark --idSet 1,7,3,6,4,48 --trials 10"
-    }
-  }
-}
