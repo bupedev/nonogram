@@ -377,6 +377,7 @@ namespace Nonogram
                     cells[i][j] = CellState.Blank;
                 }
             }
+            targetRow = 0;
         }
 
         public void Print()
@@ -464,13 +465,13 @@ namespace Nonogram
                 switch (state)
                 {
                     case CellState.Blank:
-                        Console.Write(".");
+                        Console.Write(" ");
                         break;
                     case CellState.Fill:
                         Console.Write("\u25A0");
                         break;
                     case CellState.Void:
-                        Console.Write("x");
+                        Console.Write(".");
                         break;
                 }
             }

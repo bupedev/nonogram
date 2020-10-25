@@ -18,9 +18,8 @@ namespace Nonogram
             FindSolutions(Board, GetGameStates);
         }
 
-        public static IEnumerable<GameState> GetGameStates(GameState gameState)
+        public static IEnumerable<GameState> GetGameStates(GameState gameState, int row)
         {
-            int row = gameState.TargetRow;
             GenerateLinePermutations(out List<CellState[]> permutations, gameState.RowHints[row], gameState.Width);
             foreach (CellState[] permutation in permutations)
             {
@@ -30,7 +29,7 @@ namespace Nonogram
             }
         }
 
-        private void FindSolutions(GameState source, Func<GameState, IEnumerable<GameState>> stateSelector)
+        private void FindSolutions(GameState source, Func<GameState, int, IEnumerable<GameState>> stateSelector)
         {
             Action<GameState> foo = null;
             foo = (state) =>
@@ -43,10 +42,10 @@ namespace Nonogram
                     {
                         Solutions.Add(state);
                         return;
-                    }
+                    } 
                     else
                     {
-                        var states = stateSelector(state);
+                        var states = stateSelector(state, state.TargetRow);
                         state.IncrementRowTarget();
                         Parallel.ForEach(states, new ParallelOptions { MaxDegreeOfParallelism = -1 }, (subState) => foo(subState));
                     }

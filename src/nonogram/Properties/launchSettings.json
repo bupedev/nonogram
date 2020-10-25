@@ -2,7 +2,7 @@
   "profiles": {
     "nonogram": {
       "commandName": "Project",
-      "commandLineArgs": "solve --id 8 --method sequential --verbose"
+      "commandLineArgs": "benchmark --idSet 1,7,3,6,4,48 --trials 10"
     }
   }
 }

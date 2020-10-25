@@ -157,9 +157,6 @@ namespace Nonogram
         {
             handler.MarkComplete(id);
         }
-
     }
-
-
 }
 
