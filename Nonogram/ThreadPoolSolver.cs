@@ -18,7 +18,7 @@ namespace Nonogram
         /// <param name="gameState"></param>
         /// <param name="maxThreads"></param>
         /// <param name="timeout"></param>
-        internal ThreadPoolSolver(GameState gameState, int timeout, int maxThreads = 2) 
+        internal ThreadPoolSolver(GameState gameState, int timeout, int maxThreads) 
             : base(gameState, timeout)
         {
             this.timeout = timeout;

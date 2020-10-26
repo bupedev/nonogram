@@ -9,6 +9,7 @@ using System.Threading;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Nonogram
 {
@@ -166,32 +167,23 @@ namespace Nonogram
                 GameState gameState = GetPuzzle(source, directory, id, verbose);
 
                 Solver solver;
+                double timeElapsed;
 
                 switch (method)
                 {
                     case SolvingMethod.Sequential:
-                        solver = new SequentialSolver(gameState,true);
+                        solver = new SequentialSolver(gameState, timeout);
+                        Logging.Message($"Attempting to solve using {method} solver...", verbose);
                         break;
                     case SolvingMethod.Parallel:
-                        solver = new ThreadPoolSolver(gameState, false, threads, timeout);
+                        solver = new ThreadPoolSolver(gameState, timeout, threads);
+                        Logging.Message($"Attempting to solve puzzle #{id} using {method} solver ({threads} threads)...");
                         break;
                     default:
-                        solver = new SequentialSolver(gameState, true);
-                        break;
+                        throw new NotImplementedException();
                 }
 
-                Logging.Message($"Attempting to solve using {method} solver...", verbose);
-
-                double timeElapsed = 0;
-
-                if (method.Equals(SolvingMethod.Sequential))
-                {
-                    timeElapsed = TimeSolverAverage(solver, 1, Environment.ProcessorCount, true, timeout);
-                }
-                else
-                {
-                    timeElapsed = TimeSolverAverage(solver, 1);
-                }
+                timeElapsed = TimeSolverAverage(solver, 1);
 
                 Logging.Message($"{solver.Solutions.Count( x => true )} solution(s) found in {timeElapsed:0.00E+00} seconds:");
 
@@ -229,17 +221,8 @@ namespace Nonogram
         internal static void Benchmark(PuzzleSource source, SolvingMethod[] methods, DirectoryInfo directory, string idSet, int trials, int timeout, bool verbose)
         {
             List<BenchmarkData> benchmarkData = new List<BenchmarkData>();
-            int idIndex = 0;
-            int successCounter = 0;
 
-            string[] idStrings = idSet.Split(",");
-            int[] idArray = new int[idStrings.Length];
-            for (int i = 0; i < idArray.Length; i++)
-            {
-                idArray[i] = int.Parse(idStrings[i]);
-            }
-
-            foreach(int id in idArray)
+            foreach(int id in ParseID(idSet))
             {
                 GameState gameState;
 
@@ -249,42 +232,33 @@ namespace Nonogram
 
                     foreach (SolvingMethod method in methods)
                     {
-                        if (method.Equals(SolvingMethod.Sequential))
+                        Solver solver;
+                        double time;
+
+                        switch (method)
                         {
-                            Solver solver = new SequentialSolver(gameState, true);
+                            case SolvingMethod.Sequential:
+                                solver = new SequentialSolver(gameState, timeout);
 
-                            Logging.Message($"Attempting to solve puzzle #{id} using {method} solver...");
+                                Logging.Message($"Attempting to solve puzzle #{id} using {method} solver...");
 
-                            double time = TimeSolverAverage(solver, trials, 1, false);
-
-                            benchmarkData.Add(new BenchmarkData(id, gameState.Width, gameState.Height, method, 1, time));
-                        }
-                        else
-                        {
-                            int maxThreads = Environment.ProcessorCount;
-                            for (int threadCount = 1; threadCount <= maxThreads; threadCount++)
-                            {
-                                Solver solver;
-
-                                switch (method)
+                                time = TimeSolverAverage(solver, trials);
+                                benchmarkData.Add(new BenchmarkData(id, gameState.Width, gameState.Height, method, 1, time));
+                                break;
+                            case SolvingMethod.Parallel:
+                                for (int threads = 1; threads <= Environment.ProcessorCount; threads++)
                                 {
-                                    // others can go in here once they have the appropriate interface (gameState, threadCount, timeout)
-                                    case SolvingMethod.Parallel:
-                                        solver = new ThreadPoolSolver(gameState, false, threadCount, timeout);
-                                        break;
-                                    default:
-                                        solver = new ThreadPoolSolver(gameState, false, threadCount, timeout);
-                                        break;
+                                    solver = new SequentialSolver(gameState, timeout);
+
+                                    Logging.Message($"Attempting to solve puzzle #{id} using {method} solver ({threads} threads)...");
+
+                                    time = TimeSolverAverage(solver, trials);
+                                    benchmarkData.Add(new BenchmarkData(id, gameState.Width, gameState.Height, method, threads, time));
                                 }
-
-                                Logging.Message($"Attempting to solve puzzle #{id} using {method} solver ({threadCount} threads)...");
-
-                                double times = TimeSolverAverage(solver, trials, threadCount);
-
-                                benchmarkData.Add(new BenchmarkData(id, gameState.Width, gameState.Height, method, threadCount, times));
-                            }
+                                break;
+                            default:
+                                throw new NotImplementedException();
                         }
-                        successCounter++;
                     }
                 }
                 catch (NonogramException exception)
@@ -308,8 +282,6 @@ namespace Nonogram
                         Logging.Error("Unknown");
                     #endif
                 }
-
-                idIndex++;
             }
 
             DateTime dateTime = DateTime.Now;
@@ -328,9 +300,18 @@ namespace Nonogram
             }
         }
 
-        private static double TimeSolverAverage(Solver solver, int trials, int threads = 2, bool useTimer = false, int timeout = 10000)
+        private static IEnumerable<int> ParseID(string idSet)
         {
-            double[] times = TimeSolverComplete(solver, trials, threads, useTimer, timeout);
+            string[] idStrings = idSet.Split(",");
+            for (int i = 0; i < idStrings.Length; i++)
+            {
+                yield return int.Parse(idStrings[i]);
+            }
+        }
+
+        private static double TimeSolverAverage(Solver solver, int trials)
+        {
+            double[] times = TimeSolverComplete(solver, trials);
 
             double totalTime = 0;
             foreach (double time in times)
@@ -342,38 +323,20 @@ namespace Nonogram
 
         private static ManualResetEvent timeoutEvent;
 
-        private static double[] TimeSolverComplete(Solver solver, int trials, int threads = 2, bool useTimer = false, int timeout = 5000)
+        private static double[] TimeSolverComplete(Solver solver, int trials)
         {
-            
+            Stopwatch stopwatch = new Stopwatch();            
 
             double[] times = new double[trials];
             for (int i = 0; i < trials; i++)
             {
                 WaitThreads(Environment.ProcessorCount);
-                timeoutEvent = new ManualResetEvent(false);
-                Stopwatch watch = new Stopwatch();
 
-                WaitCallback waitCallback = (obj) =>
-                {
-                    if (timeoutEvent.WaitOne(0)) return;
-                    watch.Restart();
-                    solver.Solve();
-                    watch.Stop();
-                    timeoutEvent.Set();
-                };
+                stopwatch.Restart();
+                solver.Solve();
+                stopwatch.Stop();
 
-                if (useTimer)
-                {
-                    ThreadPool.QueueUserWorkItem(waitCallback);
-                    timeoutEvent.WaitOne(timeout);
-                }
-                else
-                {
-                    waitCallback(null);  
-                }
-
-
-                times[i] = (double) watch.ElapsedTicks / Stopwatch.Frequency;
+                times[i] = (double)stopwatch.ElapsedTicks / Stopwatch.Frequency;
             }
 
             return times;
