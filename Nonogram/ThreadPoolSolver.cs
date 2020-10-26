@@ -12,23 +12,15 @@ namespace Nonogram
     /// </summary>
     internal class ThreadPoolSolver : Solver
     {
-        private ManualResetEvent terminateEvent = new ManualResetEvent(false);
-
-        private int maxThreads;
-        private long maxThreadQueue;
-        private int timeout;
-
         /// <summary>
         /// #TODO: Document
         /// </summary>
         /// <param name="gameState"></param>
         /// <param name="maxThreads"></param>
         /// <param name="timeout"></param>
-        internal ThreadPoolSolver(GameState gameState, bool solveAll, int maxThreads, int timeout, long maxThreadQueue = 0) 
-            : base(gameState, solveAll)
+        internal ThreadPoolSolver(GameState gameState, int timeout, int maxThreads = 2) 
+            : base(gameState, timeout)
         {
-            this.maxThreads = maxThreads;
-            this.maxThreadQueue = maxThreadQueue;
             this.timeout = timeout;
 
             ThreadPool.SetMinThreads(maxThreads, maxThreads);
@@ -41,9 +33,6 @@ namespace Nonogram
         internal override void Solve()
         {
             base.Solve();
-
-            ThreadPool.QueueUserWorkItem(SolveCallback, initialState);
-            terminateEvent.WaitOne(timeout);
             terminateEvent.Set();
         }
 
@@ -51,31 +40,26 @@ namespace Nonogram
         /// #TODO: Document
         /// </summary>
         /// <param name="state"></param>
-        private void SolveCallback(object obj)
+        protected override void SolveCallback(object obj)
         {
             GameState state = obj as GameState;
 
-            if (!solveAll && terminateEvent.WaitOne(0))
+            if (terminateEvent.WaitOne(0))
                 return;
 
-            IEnumerable<GameState> subStates = StatePermutations(state);
-
-            foreach (GameState subState in subStates)
+            foreach (GameState subState in StatePermutations(state))
             {
                 if (ValidatePermutation(subState))
                 {
                     if (subState.IsFinal())
                     {
                         solutions.Add(subState);
-                        if (!solveAll)
-                        {
-                            terminateEvent.Set();
-                        }
+                        terminateEvent.Set();
                         return;
                     }
                     else
                     {
-                        if (ThreadPool.PendingWorkItemCount <= maxThreadQueue)
+                        if (ThreadPool.PendingWorkItemCount == 0)
                         {
                             ThreadPool.QueueUserWorkItem(SolveCallback, subState);
                         }

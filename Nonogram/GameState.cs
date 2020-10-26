@@ -295,7 +295,7 @@ namespace Nonogram
             return true;
         }
 
-        public bool IsColumnValid(int j)
+        public bool ValidateColumn(int j)
          {
             int x = 0;
             int blockCount = 0;

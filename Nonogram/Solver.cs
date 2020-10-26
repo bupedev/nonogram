@@ -1,8 +1,6 @@
-﻿using System;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
-using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Nonogram
 {
@@ -11,14 +9,12 @@ namespace Nonogram
     /// </summary>
     internal abstract class Solver
     {
+        protected ManualResetEvent terminateEvent = new ManualResetEvent(false);
+
         protected ConcurrentBag<GameState> solutions;
         protected GameState initialState;
-        protected bool solveAll;
+        protected int timeout;
 
-        /// <summary>
-        /// #TODO: Document
-        /// </summary>
-        internal GameState InitialState => initialState;
         /// <summary>
         /// #TODO: Document
         /// </summary>
@@ -28,12 +24,12 @@ namespace Nonogram
         /// #TODO: Document
         /// </summary>
         /// <param name="initialState"></param>
-        internal Solver(GameState initialState, bool solveAll)
+        internal Solver(GameState initialState, int timeout)
         {
             this.solutions = new ConcurrentBag<GameState>();
 
             this.initialState = initialState;
-            this.solveAll = solveAll;
+            this.timeout = timeout;
         }
 
         /// <summary>
@@ -43,7 +39,15 @@ namespace Nonogram
         {
             initialState.Clear();
             solutions.Clear();
+            ThreadPool.QueueUserWorkItem(SolveCallback, initialState);
+            terminateEvent.WaitOne(timeout);
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        protected abstract void SolveCallback(object obj);
 
         /// <summary>
         /// #TODO: Document
@@ -52,9 +56,9 @@ namespace Nonogram
         /// <returns></returns>
         internal static bool ValidatePermutation(GameState gameState)
         {
-            for (int j = 0; j < gameState.Width; ++j)
+            for (int i = 0; i < gameState.Width; i++)
             {
-                if (!gameState.IsColumnValid(j))
+                if (!gameState.ValidateColumn(i))
                 {
                     return false;
                 }

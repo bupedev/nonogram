@@ -13,17 +13,8 @@ namespace Nonogram
         /// #TODO: Document
         /// </summary>
         /// <param name="board"></param>
-        internal SequentialSolver(GameState board, bool solveAll) : base(board, solveAll)
+        internal SequentialSolver(GameState board, int timeout) : base(board, timeout)
         {
-        }
-
-        /// <summary>
-        /// #TODO: Document
-        /// </summary>
-        internal override void Solve()
-        {
-            base.Solve();
-            Solve(initialState);
         }
 
         /// <summary>
@@ -31,9 +22,12 @@ namespace Nonogram
         /// </summary>
         /// <param name="gameState"></param>
         /// <param name="row"></param>
-        private void Solve(GameState state)
+        protected override void SolveCallback(object obj)
         {
-            if (!solveAll && solutions.Count > 0) return;
+            GameState state = obj as GameState;
+
+            if (terminateEvent.WaitOne(0))
+                return;
 
             foreach (GameState subState in StatePermutations(state))
             {
@@ -42,11 +36,12 @@ namespace Nonogram
                     if (subState.IsFinal())
                     {
                         solutions.Add(subState);
+                        terminateEvent.Set();
                         return;
                     }
                     else
                     {
-                        Solve(subState);
+                        SolveCallback(subState);
                     }
                 }
             }

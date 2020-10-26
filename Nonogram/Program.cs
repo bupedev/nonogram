@@ -66,20 +66,14 @@ namespace Nonogram
 
             Option timeoutOption = new Option<int>(
                 new string[] { "--timeout", "-to" },
-                getDefaultValue: () => 5000,
+                getDefaultValue: () => 10000,
                 description: "The maximum number of milliseconds to wait for a solution"
             );
 
-            Option outputOption = new Option<DirectoryInfo>(
-                new string[] { "--output", "-o" },
+            Option directoryOption = new Option<DirectoryInfo>(
+                new string[] { "--directory", "-d" },
                 getDefaultValue: () => new DirectoryInfo(@"./"),
-                description: "The directory where output files are stored"
-            );
-
-            Option inputOption = new Option<DirectoryInfo>(
-                new string[] { "--input", "-i" },
-                getDefaultValue: () => new DirectoryInfo(@"./"),
-                description: "The directory where input files are stored"
+                description: "The working root directory for all I/O"
             );
 
             Option verboseOption = new Option<bool>(
@@ -97,52 +91,52 @@ namespace Nonogram
             // Root command
             RootCommand rootCommand = new RootCommand();
 
-            rootCommand.AddGlobalOption(outputOption);
-            rootCommand.AddGlobalOption(inputOption);
+            rootCommand.AddGlobalOption(directoryOption);
             rootCommand.AddGlobalOption(verboseOption);
             rootCommand.AddGlobalOption(timeoutOption);
+            rootCommand.AddGlobalOption(sourceOption);
 
             // Solve command
             Command solveCommand = new Command("solve");
 
             solveCommand.AddOption(methodOption);
-            solveCommand.AddOption(sourceOption);
+            
             solveCommand.AddOption(idOption);
             solveCommand.AddOption(threadsOption);
 
-            solveCommand.Handler = CommandHandler.Create<SolvingMethod, DirectoryInfo, DirectoryInfo, int, int, int, bool>(Solve);
+            solveCommand.Handler = 
+                CommandHandler.Create<PuzzleSource, SolvingMethod, DirectoryInfo, int, int, int, bool>(Solve);
 
             // Play command
             Command playCommand = new Command("play");
 
-            playCommand.AddOption(sourceOption);
             playCommand.AddOption(idOption);
 
-            playCommand.Handler = CommandHandler.Create<PuzzleSource, DirectoryInfo, DirectoryInfo, int, bool>(Play);
+            playCommand.Handler = 
+                CommandHandler.Create<PuzzleSource, DirectoryInfo, int, bool>(Play);
 
             Command benchmarkCommand = new Command("benchmark");
 
             benchmarkCommand.AddOption(methodsOption);
             benchmarkCommand.AddOption(idSetOption);
             benchmarkCommand.AddOption(trialsOption);
+            
 
-            benchmarkCommand.Handler = CommandHandler.Create<SolvingMethod[], DirectoryInfo, DirectoryInfo, string, int, int, bool>(Benchmark);
+            benchmarkCommand.Handler = 
+                CommandHandler.Create<PuzzleSource, SolvingMethod[], DirectoryInfo, string, int, int, bool>(Benchmark);
 
             rootCommand.AddCommand(benchmarkCommand);
             rootCommand.AddCommand(solveCommand);
             rootCommand.AddCommand(playCommand);
 
-            //Solve(SolvingMethod.Sequential, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 48, 1, 100000, true);
-            //Solve(SolvingMethod.ManagedParallel, new DirectoryInfo(".\\"), new DirectoryInfo(".\\"), 48, 8, 100000, true);
-
             return rootCommand.InvokeAsync(args).Result;
         }
 
-        internal static void Play(PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
+        internal static void Play(PuzzleSource source, DirectoryInfo directory, int id, bool verbose)
         {
             try 
             {
-                GameState gameState = GetPuzzle(source, output, input, id, verbose);
+                GameState gameState = GetPuzzle(source, directory, id, verbose);
 
                 throw new NotImplementedException();
             }
@@ -165,13 +159,11 @@ namespace Nonogram
             }
         }
 
-        internal static void Solve(SolvingMethod method, DirectoryInfo output, DirectoryInfo input, int id, int threads, int timeout, bool verbose)
+        internal static void Solve(PuzzleSource source, SolvingMethod method, DirectoryInfo directory, int id, int threads, int timeout, bool verbose)
         {
-            PuzzleSource source = PuzzleSource.Local;
-
             try
             {
-                GameState gameState = GetPuzzle(source, output, input, id, verbose);
+                GameState gameState = GetPuzzle(source, directory, id, verbose);
 
                 Solver solver;
 
@@ -234,10 +226,8 @@ namespace Nonogram
             }
         }
 
-        internal static void Benchmark(SolvingMethod[] methods, DirectoryInfo output, DirectoryInfo input, string idSet, int trials, int timeout, bool verbose)
+        internal static void Benchmark(PuzzleSource source, SolvingMethod[] methods, DirectoryInfo directory, string idSet, int trials, int timeout, bool verbose)
         {
-            PuzzleSource source = PuzzleSource.WebPBN;
-
             List<BenchmarkData> benchmarkData = new List<BenchmarkData>();
             int idIndex = 0;
             int successCounter = 0;
@@ -255,7 +245,7 @@ namespace Nonogram
 
                 try
                 {
-                    gameState = GetPuzzle(source, output, input, id, verbose);
+                    gameState = GetPuzzle(source, directory, id, verbose);
 
                     foreach (SolvingMethod method in methods)
                     {
@@ -280,10 +270,10 @@ namespace Nonogram
                                 {
                                     // others can go in here once they have the appropriate interface (gameState, threadCount, timeout)
                                     case SolvingMethod.Parallel:
-                                        solver = new ThreadPoolSolver(gameState, true, threadCount, timeout);
+                                        solver = new ThreadPoolSolver(gameState, false, threadCount, timeout);
                                         break;
                                     default:
-                                        solver = new ThreadPoolSolver(gameState, true, threadCount, timeout);
+                                        solver = new ThreadPoolSolver(gameState, false, threadCount, timeout);
                                         break;
                                 }
 
@@ -324,7 +314,7 @@ namespace Nonogram
 
             DateTime dateTime = DateTime.Now;
 
-            FileInfo benchmarkFile = new FileInfo($"{output.FullName}benchmark_{DateTime.Now:dd-MM-yyyy_hh-mm}.csv");
+            FileInfo benchmarkFile = new FileInfo($"{directory.FullName}benchmark_{DateTime.Now:dd-MM-yyyy_hh-mm}.csv");
 
             Logging.Message($"Saving benchmark data to file: {benchmarkFile.Name}");
 
@@ -401,11 +391,11 @@ namespace Nonogram
             }
         }
 
-        private static GameState GetPuzzle(PuzzleSource source, DirectoryInfo output, DirectoryInfo input, int id, bool verbose)
+        private static GameState GetPuzzle(PuzzleSource source, DirectoryInfo directory, int id, bool verbose)
         {
-            InitializeDirectories(input, output, new string[] { $"resources/{source.ToString().ToLower()}" }, null, verbose);
+            InitializeDirectories(directory, new string[] { $"resources/{source.ToString().ToLower()}" }, verbose);
 
-            FileInfo puzzleFile = new FileInfo($"{input.FullName}resources/{source.ToString().ToLower()}/{id}.xml");
+            FileInfo puzzleFile = new FileInfo($"{directory.FullName}resources/{source.ToString().ToLower()}/{id}.xml");
 
             FetchPuzzle(source, id, puzzleFile, verbose);
 
@@ -457,46 +447,32 @@ namespace Nonogram
             }
         }
 
-        private static void InitializeDirectories(DirectoryInfo input, DirectoryInfo output, string[] inputSubDirectories, string[] outputSubDirectories, bool verbose)
+        private static void InitializeDirectories(DirectoryInfo directory, string[] subDirectories, bool verbose)
         {
             Logging.Message("Intialzing directories...", verbose);
 
-            input.Refresh();
-            output.Refresh();
+            directory.Refresh();
 
-            if (!input.Exists)
+            if (!directory.Exists)
             {
-                Logging.Message($"Creating {input.FullName}...", verbose);
-                input.Create();
+                Logging.Message($"Creating {directory.FullName}...", verbose);
+                directory.Create();
             }
 
-            if (!output.Exists)
+            if (!directory.Exists)
             {
-                Logging.Message($"Creating {output.FullName}...", verbose);
-                output.Create();
+                Logging.Message($"Creating {directory.FullName}...", verbose);
+                directory.Create();
             }
 
-            if (inputSubDirectories != null)
+            if (subDirectories != null)
             { 
-                foreach (string subdirectory in inputSubDirectories)
+                foreach (string subDirectory in subDirectories)
                 {
-                    if (!File.Exists($"{input.FullName}{subdirectory}"))
+                    if (!File.Exists($"{directory.FullName}{subDirectory}"))
                     {
-                        DirectoryInfo directoryInfo = new DirectoryInfo($"{input.FullName}{subdirectory}");
+                        DirectoryInfo directoryInfo = new DirectoryInfo($"{directory.FullName}{subDirectory}");
                         Logging.Message($"Creating {directoryInfo.FullName}...", verbose);
-                        directoryInfo.Create();
-                    }
-                }
-            }
-
-            if (outputSubDirectories != null)
-            { 
-                foreach (string subDirectory in outputSubDirectories)
-                {
-                    if (!File.Exists($"{output.FullName}{subDirectory}"))
-                    {
-                        DirectoryInfo directoryInfo = new DirectoryInfo($"{output.FullName}{subDirectory}");
-                        Logging.Message($"Creating {directoryInfo}...", verbose);
                         directoryInfo.Create();
                     }
                 }

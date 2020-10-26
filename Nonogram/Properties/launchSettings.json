@@ -2,7 +2,7 @@
   "profiles": {
     "Nonogram": {
       "commandName": "Project",
-      "commandLineArgs": "solve --id 1 --source Local --method parallel --threads 8 --verbose --timeout 200000"
+      "commandLineArgs": "solve --id 1 --source WebPBN --method parallel --threads 8 --verbose --timeout 200000 -- input C:\\data\\nonogram"
     }
   }
 }
